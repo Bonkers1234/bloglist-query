@@ -1,23 +1,25 @@
 import { useState, useEffect, useRef } from 'react'
 import Blog from './components/Blog'
-import blogService from './services/blogs'
+import blogService, { getAll, create, update, remove } from './services/blogs'
 import LoginForm from './components/LoginForm'
 import CreateForm from './components/CreateForm'
 import Notification from './components/Notification'
 import Togglable from './components/Togglable'
 import { useNotify } from './reducers/notificationReducer'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 
 const App = () => {
-  const [blogs, setBlogs] = useState([])
   const [user, setUser] = useState(null)
 
   const createFormRef = useRef()
 
-  useEffect(() => {
-    blogService.getAll().then(blogs =>
-      setBlogs( blogs )
-    )
-  }, [])
+  const queryClient = useQueryClient()
+  const blogsData = useQuery({
+    queryKey: ['blogs'],
+    queryFn: getAll,
+    retry: 1,
+    refetchOnWindowFocus: false
+  })
 
   useEffect(() => {
     const loggedUserJSON = window.localStorage.getItem('loggedBlogappUser')
@@ -36,31 +38,50 @@ const App = () => {
     notifyWith('Logged out!')
   }
 
-  const blogLike = async (blog) => {
-    const blogToUpdate = { ...blog, likes: blog.likes + 1, user: blog.user.id }
-    const updatedBlog = await blogService.update(blogToUpdate)
-    notifyWith(`You liked '${blog.title}' by '${blog.author}'`)
-    setBlogs(blogs.map(b => b.id === blog.id ? updatedBlog : b))
-  }
-
-  const remove = async (blog) => {
-    if(window.confirm(`Are you sure you want to remove '${blog.title}' by '${blog.author}'?`)) {
-      await blogService.remove(blog.id)
-      notifyWith(`Blog '${blog.title}' by '${blog.author}' removed.`)
-      setBlogs(blogs.filter(b => b.id !== blog.id))
-    }
-  }
-
-  const createBlog = async (newBlog) => {
-    try {
-      const createdBlog = await blogService.create(newBlog)
-      notifyWith(`New blog '${newBlog.title}' by '${newBlog.author}' added!`)
-      setBlogs(blogs.concat(createdBlog))
-      createFormRef.current.toggleVisibility()
-    } catch(error) {
+  const likeBlogMutation = useMutation({
+    mutationFn: update,
+    onSuccess: (blog) => {
+      const staleBlogs = queryClient.getQueryData(['blogs'])
+      queryClient.setQueryData(['blogs'], staleBlogs.map(b => b.id === blog.id ? blog : b))
+      notifyWith(`You liked '${blog.title}' by '${blog.author}'`)
+    },
+    onError: (error) => {
       notifyWith(error.response.data.error, 'error')
     }
+  })
+
+  const removeBlogMutation = useMutation({
+    mutationFn: (blog) => remove(blog.id),
+    onSuccess: (_, blog) => {
+      const staleBlogs = queryClient.getQueryData(['blogs'])
+      queryClient.setQueryData(['blogs'], staleBlogs.filter(b => b.id !== blog.id))
+      notifyWith(`Blog '${blog.title}' by '${blog.author}' removed.`)
+    },
+    onError: (error) => {
+      notifyWith(error.response.data.error, 'error')
+    }
+  })
+
+  const createBlogMutation = useMutation({
+    mutationFn: create,
+    onSuccess: (blog) => {
+      createFormRef.current.toggleVisibility()
+      const staleBlogs = queryClient.getQueryData(['blogs'])
+      queryClient.setQueryData(['blogs'], staleBlogs.concat(blog))
+      notifyWith(`New blog '${blog.title}' by '${blog.author}' added!`)
+    },
+    onError: (error) => {
+      notifyWith(error.response.data.error, 'error')
+    }
+  })
+
+  if(blogsData.isLoading) {
+    return <div>Loading data...</div>
+  } else if(blogsData.isError) {
+    return <div>There has been a problem retrieving data from server, wait then try again.</div>
   }
+
+  const blogs = blogsData.data
 
   return (
     <div>
@@ -71,15 +92,15 @@ const App = () => {
         <p>{user.name} logged in <button onClick={logout}>logout</button></p>
         <Togglable buttonLabel='new blog' ref={createFormRef} >
           <CreateForm
-            createBlog={createBlog}
+            createBlogMutation={createBlogMutation}
           />
         </Togglable>
         {blogs.sort((a, b) => b.likes - a.likes).map(blog =>
           <Blog
             key={blog.id}
             blog={blog}
-            blogLike={() => blogLike(blog)}
-            remove={() => remove(blog)}
+            likeBlogMutation={likeBlogMutation}
+            removeBlogMutation={removeBlogMutation}
             canRemove={user && blog.user.username === user.username}
           />
         )}

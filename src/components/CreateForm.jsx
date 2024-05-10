@@ -1,38 +1,17 @@
 
 import { useState } from 'react'
-import blogService from '../services/blogs'
 
-const CreateForm = ({ createBlog }) => {
+const CreateForm = ({ createBlogMutation }) => {
   const [title, setTitle] = useState('')
   const [author, setAuthor] = useState('')
   const [url, setUrl] = useState('')
 
   const handleCreate = async (event) => {
     event.preventDefault()
-    createBlog({ title, author, url, likes: 0 })
+    createBlogMutation.mutate({ title, author, url, likes: 0 })
     setTitle('')
     setAuthor('')
     setUrl('')
-    // const newBlog = {
-    //   title,
-    //   author,
-    //   url
-    // }
-
-    // try {
-    //   toggleVis.current.toggleVisibility()
-    //   const savedBlog = await blogService.create(newBlog)
-    //   setBlogs(blogs.concat(savedBlog))
-    //   setTitle('')
-    //   setAuthor('')
-    //   setUrl('')
-    //   notifyWith(`New blog '${savedBlog.title}' by '${savedBlog.author}' added!`)
-    // } catch(error) {
-    //   setTitle('')
-    //   setAuthor('')
-    //   setUrl('')
-    //   notifyWith(error.response.data.error, 'error')
-    // }
   }
 
   return (

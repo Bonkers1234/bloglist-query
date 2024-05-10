@@ -12,10 +12,10 @@
     "cypress:open": "cypress open"
   },
   "dependencies": {
+    "@tanstack/react-query": "^5.35.1",
     "axios": "^1.4.0",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0",
-    "react-query": "^3.39.3"
+    "react-dom": "^18.2.0"
   },
   "jest": {
     "testEnvironment": "jsdom"
