@@ -1,15 +1,18 @@
-import { useState, useEffect, useRef } from 'react'
+import { useEffect, useRef } from 'react'
 import Blog from './components/Blog'
-import blogService, { getAll, create, update, remove } from './services/blogs'
+import { getAll, create, update, remove } from './services/blogs'
 import LoginForm from './components/LoginForm'
 import CreateForm from './components/CreateForm'
 import Notification from './components/Notification'
 import Togglable from './components/Togglable'
 import { useNotify } from './reducers/notificationReducer'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { useUserSet, useUserLogout, useUserValue } from './reducers/userReducer'
 
 const App = () => {
-  const [user, setUser] = useState(null)
+  const user = useUserValue()
+  const setUser = useUserSet()
+  const logoutUser = useUserLogout()
 
   const createFormRef = useRef()
 
@@ -22,19 +25,13 @@ const App = () => {
   })
 
   useEffect(() => {
-    const loggedUserJSON = window.localStorage.getItem('loggedBlogappUser')
-    if(loggedUserJSON) {
-      const userInfo = JSON.parse(loggedUserJSON)
-      setUser(userInfo)
-      blogService.setToken(userInfo.token)
-    }
+    setUser()
   },[])
 
   const notifyWith = useNotify()
 
   const logout = () => {
-    window.localStorage.removeItem('loggedBlogappUser')
-    setUser(null)
+    logoutUser()
     notifyWith('Logged out!')
   }
 
@@ -86,7 +83,7 @@ const App = () => {
   return (
     <div>
       <Notification />
-      {!user && <LoginForm setUser={setUser} notifyWith={notifyWith} />}
+      {!user && <LoginForm notifyWith={notifyWith} />}
       {user && <div>
         <h2>blogs</h2>
         <p>{user.name} logged in <button onClick={logout}>logout</button></p>

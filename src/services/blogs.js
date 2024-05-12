@@ -1,10 +1,15 @@
 import axios from 'axios'
 const baseUrl = 'http://localhost:3003/api/blogs'
 
-let token = null
 
-const setToken = (newToken) => {
-  token = `Bearer ${newToken}`
+const config = () => {
+  return {
+    headers: {
+      Authorization: localStorage.getItem('loggedBlogappUser')
+        ? `Bearer ${JSON.parse(localStorage.getItem('loggedBlogappUser')).token}`
+        : null
+    }
+  }
 }
 
 export const getAll = async () => {
@@ -13,29 +18,17 @@ export const getAll = async () => {
 }
 
 export const create = async (newObject) => {
-  const config = {
-    headers: { Authorization: token }
-  }
-
-  const request = await axios.post(baseUrl, newObject, config)
+  const request = await axios.post(baseUrl, newObject, config())
   return request.data
 }
 
 export const update = async (newObject) => {
-  const config = {
-    headers: { Authorization: token }
-  }
-
-  const request = await axios.put(`${baseUrl}/${newObject.id}`, newObject, config)
+  const request = await axios.put(`${baseUrl}/${newObject.id}`, newObject, config())
   return request.data
 }
 
 export const remove = async (id) => {
-  const config = {
-    headers: { Authorization: token }
-  }
-
-  await axios.delete(`${baseUrl}/${id}`, config)
+  await axios.delete(`${baseUrl}/${id}`, config())
 }
 
-export default { getAll, setToken, create, update, remove }
+export default { getAll, create, update, remove }

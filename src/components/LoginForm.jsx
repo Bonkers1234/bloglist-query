@@ -1,20 +1,17 @@
 
 import { useState } from 'react'
-import loginService from '../services/login'
-import blogService from '../services/blogs'
+import { useUserLogin } from '../reducers/userReducer'
 
-const LoginForm = ({ setUser, notifyWith }) => {
+const LoginForm = ({ notifyWith }) => {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
+  const loginUser = useUserLogin()
 
   const handleLogin = async (event) => {
     event.preventDefault()
 
     try {
-      const userInfo = await loginService.login({ username, password })
-      window.localStorage.setItem('loggedBlogappUser', JSON.stringify(userInfo))
-      blogService.setToken(userInfo.token)
-      setUser(userInfo)
+      loginUser({ username, password })
       setUsername('')
       setPassword('')
       notifyWith('Welcome')
